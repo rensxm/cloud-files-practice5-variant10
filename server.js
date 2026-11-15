@@ -5,6 +5,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json({ limit: '16kb' }));
 
 app.get('/', (req, res) => res.send('Файлдар REST API қызметі жұмыс істеп тұр'));
+app.get('/demo', (req, res) => res.sendFile(require('node:path').join(__dirname, 'demo.html')));
 app.get('/info', (req, res) => res.json({
   status: 'ok',
   variant: process.env.STUDENT_VARIANT || 'not-set',
