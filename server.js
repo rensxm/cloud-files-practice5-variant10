@@ -15,7 +15,7 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '16kb' }));
 
-app.get('/', (req, res) => res.send('Файлдар REST API қызметі жұмыс істеп тұр'));
+app.get('/', (req, res) => res.redirect('/demo'));
 app.get('/demo', (req, res) => res.sendFile(require('node:path').join(__dirname, 'demo.html')));
 app.get('/info', (req, res) => res.json({
   status: 'ok',
@@ -58,18 +58,36 @@ app.get('/api/files/:id', async (req, res) => {
   res.json(result.rows[0]);
 });
 
-app.post('/api/files', async (req, res) => {
+function validateFile(req, res, next) {
   const { name, content_type, size_bytes } = req.body || {};
   if (typeof name !== 'string' || !name.trim() || name.trim().length > 255 ||
       typeof content_type !== 'string' || !content_type.trim() || content_type.trim().length > 127 ||
       !Number.isInteger(size_bytes) || size_bytes < 0 || size_bytes > 2147483647) {
     return res.status(400).json({ error: 'name, content_type және теріс емес бүтін size_bytes қажет' });
   }
+  req.fileData = [name.trim(), content_type.trim(), size_bytes];
+  next();
+}
+
+app.post('/api/files', validateFile, async (req, res) => {
   const result = await pool.query(
     'INSERT INTO files (name, content_type, size_bytes) VALUES ($1, $2, $3) RETURNING id, name, content_type, size_bytes',
-    [name.trim(), content_type.trim(), size_bytes]
+    req.fileData
   );
   res.location(`/api/files/${result.rows[0].id}`).status(201).json(result.rows[0]);
+});
+
+app.put('/api/files/:id', validateFile, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!/^\d+$/.test(req.params.id) || !Number.isInteger(id) || id < 1 || id > 2147483647) {
+    return res.status(400).json({ error: 'id оң бүтін сан болуы керек' });
+  }
+  const result = await pool.query(
+    'UPDATE files SET name=$1, content_type=$2, size_bytes=$3 WHERE id=$4 RETURNING id, name, content_type, size_bytes',
+    [...req.fileData, id]
+  );
+  if (!result.rows.length) return res.status(404).json({ error: 'Файл табылмады' });
+  res.status(200).json(result.rows[0]);
 });
 
 app.use((req, res) => res.status(404).json({ error: 'Маршрут табылмады' }));
