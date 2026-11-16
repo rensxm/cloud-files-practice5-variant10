@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Pool } = require('pg');
 
 if (!process.env.DATABASE_URL) {
@@ -8,7 +9,8 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // Жергілікті PostgreSQL үшін DATABASE_SSL=disable орнатылады.
   ssl: process.env.DATABASE_SSL === 'disable' ? false : { rejectUnauthorized: true },
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 3000,
+  query_timeout: 5000,
   max: 5
 });
 

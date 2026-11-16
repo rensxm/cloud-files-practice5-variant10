@@ -2,6 +2,17 @@ const express = require('express');
 const pool = require('./db');
 const app = express();
 const PORT = process.env.PORT || 3000;
+app.disable('x-powered-by');
+
+// Сұраныс денесі мен URL query бөлігін журналға жазбаймыз.
+app.use((req, res, next) => {
+  const started = Date.now();
+  res.on('finish', () => console.log(JSON.stringify({
+    time: new Date().toISOString(), method: req.method, url: req.path,
+    status: res.statusCode, durationMs: Date.now() - started
+  })));
+  next();
+});
 app.use(express.json({ limit: '16kb' }));
 
 app.get('/', (req, res) => res.send('Файлдар REST API қызметі жұмыс істеп тұр'));
@@ -11,6 +22,22 @@ app.get('/info', (req, res) => res.json({
   variant: process.env.STUDENT_VARIANT || 'not-set',
   databaseConfigured: Boolean(process.env.DATABASE_URL)
 }));
+
+// Бұл маршрут базаға сұраныс жібермейді.
+app.get('/health', (req, res) => res.status(200).json({
+  status: 'ok', time: new Date().toISOString()
+}));
+
+app.get('/health/db', async (req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.status(200).json({ status: 'ok', database: 'connected' });
+  } catch (error) {
+    console.error(JSON.stringify({ time: new Date().toISOString(),
+      event: 'DB_HEALTH_ERROR', code: error.code || 'UNKNOWN' }));
+    res.status(503).json({ status: 'degraded', database: 'unavailable' });
+  }
+});
 
 async function listFiles(req, res) {
   const result = await pool.query('SELECT id, name, content_type, size_bytes FROM files ORDER BY id');
@@ -50,8 +77,10 @@ app.use((error, req, res, next) => {
   if (error.type === 'entity.parse.failed') return res.status(400).json({ error: 'JSON пішімі қате' });
   if (error.type === 'entity.too.large') return res.status(413).json({ error: 'Сұраныс көлемі тым үлкен' });
   if (error.code === '23505') return res.status(409).json({ error: 'Мұндай атауы бар файл тіркелген' });
-  console.error('DB_QUERY_ERROR', error.code || 'UNKNOWN');
-  res.status(503).json({ error: 'Деректер қоры уақытша қолжетімсіз' });
+  console.error(JSON.stringify({ time: new Date().toISOString(),
+    event: 'SERVER_ERROR', method: req.method, url: req.path,
+    code: error.code || 'UNKNOWN' }));
+  res.status(500).json({ error: 'Серверде қате пайда болды' });
 });
 
 const server = app.listen(PORT, '0.0.0.0', () => console.log(`Сервер ${PORT} портында іске қосылды`));
