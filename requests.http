@@ -1,20 +1,28 @@
-@baseUrl = http://localhost:3000
+@base = https://cloud-files-practice5-variant10.onrender.com
 
-### Барлық жазбаны оқу
-GET {{baseUrl}}/api/files
+### Барлық файл
+GET {{base}}/api/files
 
-### Бір жазбаны оқу
-GET {{baseUrl}}/api/files/1
+### Бар файл
+GET {{base}}/api/files/1
 
-### Жаңа жазба қосу
-POST {{baseUrl}}/api/files
+### Жоқ файл: 404
+GET {{base}}/api/files/2147483647
+
+### Міндетті өріс жоқ: 400
+POST {{base}}/api/files
 Content-Type: application/json
 
-{
-  "name": "зертхана.txt",
-  "content_type": "text/plain",
-  "size_bytes": 2048
-}
+{"name":"тексеру.txt"}
 
-### Құпиясыз конфигурация белгісін көру
-GET {{baseUrl}}/info
+### Жаңа файл: әр іске қосқанда атауын өзгертіңіз
+POST {{base}}/api/files
+Content-Type: application/json
+
+{"name":"менің-жаңа-файлым.txt","content_type":"text/plain","size_bytes":128}
+
+### Қызмет күйі
+GET {{base}}/health
+
+### База күйі: дұрыс қосылымда 200, ақауда 503
+GET {{base}}/health/db
