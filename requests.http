@@ -26,3 +26,10 @@ GET {{base}}/health
 
 ### База күйі: дұрыс қосылымда 200, ақауда 503
 GET {{base}}/health/db
+
+### Өз POST жауабындағы ID нөмірін жазыңыз: толық жаңарту
+PUT {{base}}/api/files/ID
+Content-Type: application/json
+
+{"name":"менің-жаңа-файлым.txt","content_type":"text/plain","size_bytes":8192}
+
